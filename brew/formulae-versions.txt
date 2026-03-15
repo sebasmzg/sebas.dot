@@ -1,0 +1,3 @@
+engram 1.10.0
+gentle-ai 1.5.5
+gga 2.7.3

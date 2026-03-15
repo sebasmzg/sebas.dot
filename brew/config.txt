@@ -1,0 +1,27 @@
+HOMEBREW_VERSION: 5.1.0
+ORIGIN: https://github.com/Homebrew/brew
+HEAD: 4135badeddc3899aa2e89d3ea1caee320c55d299
+Last commit: 4 days ago
+Branch: stable
+Core tap JSON: 15 Mar 17:33 UTC
+HOMEBREW_PREFIX: /home/linuxbrew/.linuxbrew
+HOMEBREW_CASK_OPTS: []
+HOMEBREW_DISPLAY: :0
+HOMEBREW_DOWNLOAD_CONCURRENCY: 16
+HOMEBREW_FORBID_PACKAGES_FROM_PATHS: set
+HOMEBREW_MAKE_JOBS: 8
+Homebrew Ruby: 4.0.1 => /home/linuxbrew/.linuxbrew/Homebrew/Library/Homebrew/vendor/portable-ruby/4.0.1/bin/ruby
+CPU: octa-core 64-bit tigerlake
+Clang: N/A
+Git: 2.43.0 => /bin/git
+Curl: 8.5.0 => /bin/curl
+Kernel: Linux 6.17.0-14-generic x86_64 GNU/Linux
+OS: Ubuntu 24.04.4 LTS (noble)
+Host glibc: 2.39
+Host libstdc++: 6.0.33
+/usr/bin/gcc: 13.3.0
+/usr/bin/ruby: N/A
+glibc: N/A
+gcc@12: N/A
+gcc: N/A
+xorg: N/A

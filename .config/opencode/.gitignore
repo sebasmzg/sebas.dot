@@ -1,0 +1,13 @@
+node_modules/
+*.bak
+*.log
+.DS_Store
+tmp/
+temp/
+cache/
+sessions/
+history/
+.env
+.env.*
+secrets/
+credentials.json

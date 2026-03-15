@@ -1,0 +1,34 @@
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# Logs and runtime artifacts
+*.log
+*.pid
+*.tmp
+tmp/
+temp/
+cache/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+credentials.json
+secrets/
+
+# Python / Node generic caches
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# Keep repo managed opencode lockfiles if present
+!.config/opencode/package.json
+!.config/opencode/bun.lock
