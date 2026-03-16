@@ -203,6 +203,41 @@ apply_brewfile() {
   run_cmd brew bundle --file "$SELECTED_BREWFILE_PATH"
 }
 
+validate_critical_binaries() {
+  local -a required_bins
+  local -a missing_bins
+  local bin
+  local install_hint=""
+
+  required_bins=(brew nvim zellij atuin git rg fd)
+  missing_bins=()
+
+  for bin in "${required_bins[@]}"; do
+    if ! command -v "$bin" >/dev/null 2>&1; then
+      missing_bins+=("$bin")
+    fi
+  done
+
+  if [ "${#missing_bins[@]}" -eq 0 ]; then
+    log "Critical binary check OK: brew nvim zellij atuin git rg fd"
+    return
+  fi
+
+  for bin in "${missing_bins[@]}"; do
+    case "$bin" in
+      rg)
+        install_hint+=" ripgrep"
+        ;;
+      *)
+        install_hint+=" $bin"
+        ;;
+    esac
+  done
+
+  log "WARNING: Missing critical binaries:${install_hint}"
+  log "Run this to install missing binaries: brew install${install_hint}"
+}
+
 link_core_configs() {
   log "Creating safe symlinks for core dotfiles"
   safe_symlink "$REPO_ROOT/.zshrc" "$HOME/.zshrc"
@@ -251,6 +286,7 @@ opencode_sync_phase() {
 run_brew_phase() {
   ensure_linuxbrew
   apply_brewfile
+  validate_critical_binaries
 }
 
 run_links_phase() {

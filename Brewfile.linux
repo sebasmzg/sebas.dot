@@ -2,3 +2,24 @@ tap "gentleman-programming/tap"
 brew "gentleman-programming/tap/engram"
 brew "gentleman-programming/tap/gentle-ai"
 brew "gentleman-programming/tap/gga"
+
+# Core shell/editor stack used by this dotfiles repo
+brew "git"
+brew "neovim"
+brew "zellij"
+brew "atuin"
+brew "zoxide"
+brew "fzf"
+brew "ripgrep"
+brew "fd"
+
+# Runtime and CLI helpers referenced by Neovim/plugins/install scripts
+brew "node"
+brew "jq"
+brew "curl"
+brew "rsync"
+
+# Archive helpers used by shell functions in .zshrc
+brew "unzip"
+brew "p7zip"
+brew "unrar"
