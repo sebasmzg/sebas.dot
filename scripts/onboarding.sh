@@ -3,7 +3,7 @@ set -euo pipefail
 
 MODE="safe"
 REPO_URL="git@github.com:sebasmzg/sebas.dot.git"
-TARGET="~/.sebas.dot"
+TARGET="$HOME/.sebas.dot"
 SKIP_CLONE=0
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/sebas.dot"
@@ -17,7 +17,7 @@ Usage: scripts/onboarding.sh [options]
 Options:
   --mode <safe|strict>      Onboarding mode (default: safe)
   --repo <ssh-or-https-url> Repository URL (default: git@github.com:sebasmzg/sebas.dot.git)
-  --target <path>           Clone/update target path (default: ~/.sebas.dot)
+  --target <path>           Clone/update target path (default: $HOME/.sebas.dot)
   --skip-clone              Assume repo already exists at target
   --help                    Show this help
 
@@ -190,6 +190,10 @@ preflight() {
 
 ensure_repo_ready() {
   TARGET="$(expand_home_path "$TARGET")"
+
+  if [[ "$TARGET" == *"~"* ]]; then
+    fail "invalid target path after normalization: '$TARGET' contains literal '~'. Use an absolute path or '~/...'."
+  fi
 
   if [ "$SKIP_CLONE" -eq 1 ]; then
     log "INFO" "--skip-clone enabled; validating existing repository"

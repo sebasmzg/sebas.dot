@@ -3,6 +3,8 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BREWFILE_PATH="$REPO_ROOT/Brewfile"
+BREWFILE_LINUX_PATH="$REPO_ROOT/Brewfile.linux"
+SELECTED_BREWFILE_PATH="$BREWFILE_PATH"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/sebas.dot"
 LOG_FILE="$STATE_DIR/install.log"
 
@@ -175,9 +177,30 @@ ensure_linuxbrew() {
   }
 }
 
+select_brewfile() {
+  local os
+  os="$(uname -s)"
+
+  if [ "$os" = "Linux" ]; then
+    if [ -f "$BREWFILE_LINUX_PATH" ]; then
+      SELECTED_BREWFILE_PATH="$BREWFILE_LINUX_PATH"
+      log "Linux detected. Using Linux-only Brewfile: $SELECTED_BREWFILE_PATH"
+      return
+    fi
+
+    SELECTED_BREWFILE_PATH="$BREWFILE_PATH"
+    log "WARNING: Linux detected but $BREWFILE_LINUX_PATH not found; falling back to $SELECTED_BREWFILE_PATH"
+    return
+  fi
+
+  SELECTED_BREWFILE_PATH="$BREWFILE_PATH"
+  log "OS detected: $os. Using default Brewfile: $SELECTED_BREWFILE_PATH"
+}
+
 apply_brewfile() {
-  log "Applying exact Brewfile"
-  run_cmd brew bundle --file "$BREWFILE_PATH"
+  select_brewfile
+  log "Applying Brewfile: $SELECTED_BREWFILE_PATH"
+  run_cmd brew bundle --file "$SELECTED_BREWFILE_PATH"
 }
 
 link_core_configs() {

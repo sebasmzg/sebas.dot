@@ -1,0 +1,4 @@
+tap "gentleman-programming/tap"
+brew "gentleman-programming/tap/engram"
+brew "gentleman-programming/tap/gentle-ai"
+brew "gentleman-programming/tap/gga"
