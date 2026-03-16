@@ -5,6 +5,7 @@ brew "gentleman-programming/tap/gga"
 
 # Core shell/editor stack used by this dotfiles repo
 brew "git"
+brew "zsh"
 brew "neovim"
 brew "zellij"
 brew "atuin"
@@ -12,14 +13,17 @@ brew "zoxide"
 brew "fzf"
 brew "ripgrep"
 brew "fd"
+brew "opencode"
 
 # Runtime and CLI helpers referenced by Neovim/plugins/install scripts
 brew "node"
 brew "jq"
 brew "curl"
 brew "rsync"
+brew "docker"
+brew "docker-compose"
 
 # Archive helpers used by shell functions in .zshrc
 brew "unzip"
 brew "p7zip"
-brew "unrar"
+brew "unar"

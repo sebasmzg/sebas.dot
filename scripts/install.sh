@@ -209,7 +209,7 @@ validate_critical_binaries() {
   local bin
   local install_hint=""
 
-  required_bins=(brew nvim zellij atuin git rg fd)
+  required_bins=(brew zsh nvim zellij atuin git rg fd opencode docker)
   missing_bins=()
 
   for bin in "${required_bins[@]}"; do
@@ -219,7 +219,7 @@ validate_critical_binaries() {
   done
 
   if [ "${#missing_bins[@]}" -eq 0 ]; then
-    log "Critical binary check OK: brew nvim zellij atuin git rg fd"
+    log "Critical binary check OK: brew zsh nvim zellij atuin git rg fd opencode docker"
     return
   fi
 
@@ -236,6 +236,49 @@ validate_critical_binaries() {
 
   log "WARNING: Missing critical binaries:${install_hint}"
   log "Run this to install missing binaries: brew install${install_hint}"
+}
+
+ensure_zsh_in_etc_shells() {
+  local zsh_path
+  zsh_path="$(command -v zsh || true)"
+
+  if [ -z "$zsh_path" ]; then
+    log "WARNING: zsh not found in PATH; skipping /etc/shells registration"
+    return
+  fi
+
+  if [ ! -f /etc/shells ]; then
+    log "WARNING: /etc/shells not found; cannot register $zsh_path"
+    return
+  fi
+
+  if grep -Fx "$zsh_path" /etc/shells >/dev/null 2>&1; then
+    log "zsh already registered in /etc/shells: $zsh_path"
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "DRY-RUN: would register zsh in /etc/shells using sudo tee"
+    return
+  fi
+
+  if command -v sudo >/dev/null 2>&1; then
+    log "Registering zsh in /etc/shells: $zsh_path"
+    printf '%s\n' "$zsh_path" | sudo tee -a /etc/shells >/dev/null || {
+      log "WARNING: Failed to register zsh in /etc/shells. Run manually: echo '$zsh_path' | sudo tee -a /etc/shells"
+      return
+    }
+  else
+    log "WARNING: sudo not available. Register zsh manually: echo '$zsh_path' | sudo tee -a /etc/shells"
+    return
+  fi
+
+  if command -v chsh >/dev/null 2>&1; then
+    log "Attempting to set default shell to zsh for user $USER"
+    chsh -s "$zsh_path" || log "WARNING: Could not change default shell automatically. Run manually: chsh -s '$zsh_path'"
+  else
+    log "WARNING: chsh not available. Set shell manually if needed"
+  fi
 }
 
 link_core_configs() {
@@ -287,6 +330,7 @@ run_brew_phase() {
   ensure_linuxbrew
   apply_brewfile
   validate_critical_binaries
+  ensure_zsh_in_etc_shells
 }
 
 run_links_phase() {
