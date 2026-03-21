@@ -12,7 +12,20 @@ fi
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
 # Powerlevel10k
-source ~/.local/share/zsh/powerlevel10k/powerlevel10k.zsh-theme
+_p10k_theme=""
+if [ -f "$HOME/.local/share/zsh/powerlevel10k/powerlevel10k.zsh-theme" ]; then
+    _p10k_theme="$HOME/.local/share/zsh/powerlevel10k/powerlevel10k.zsh-theme"
+elif command -v brew >/dev/null 2>&1; then
+    _p10k_theme="$(brew --prefix)/opt/powerlevel10k/powerlevel10k.zsh-theme"
+elif [ -f "/home/linuxbrew/.linuxbrew/opt/powerlevel10k/powerlevel10k.zsh-theme" ]; then
+    _p10k_theme="/home/linuxbrew/.linuxbrew/opt/powerlevel10k/powerlevel10k.zsh-theme"
+elif [ -f "$HOME/.linuxbrew/opt/powerlevel10k/powerlevel10k.zsh-theme" ]; then
+    _p10k_theme="$HOME/.linuxbrew/opt/powerlevel10k/powerlevel10k.zsh-theme"
+fi
+
+if [ -n "$_p10k_theme" ] && [ -f "$_p10k_theme" ]; then
+    source "$_p10k_theme"
+fi
 
 # Autocompletado
 autoload -Uz compinit
@@ -117,4 +130,10 @@ export PATH="$HOME/.atuin/bin:$PATH"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+if [ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then
+    eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
+elif command -v brew >/dev/null 2>&1; then
+    eval "$(brew shellenv)"
+fi

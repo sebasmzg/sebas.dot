@@ -6,6 +6,7 @@ brew "gentleman-programming/tap/gga"
 # Core shell/editor stack used by this dotfiles repo
 brew "git"
 brew "zsh"
+brew "powerlevel10k"
 brew "neovim"
 brew "zellij"
 brew "atuin"

@@ -16,6 +16,8 @@ font-size = 14
 # │                                  WINDOW                                      │
 # └──────────────────────────────────────────────────────────────────────────────┘
 
+command = zsh
+
 background-opacity = 0.95
 background-blur-radius = 20
 

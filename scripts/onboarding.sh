@@ -10,6 +10,14 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/sebas.dot"
 ONBOARDING_LOG="$STATE_DIR/onboarding.log"
 INSTALL_LOG="$STATE_DIR/install.log"
 
+on_error() {
+  local line_no="$1"
+  local exit_code="$2"
+  log "ERROR" "Onboarding failed at line $line_no (exit code: $exit_code)"
+  log "ERROR" "Troubleshooting logs: $ONBOARDING_LOG and $INSTALL_LOG"
+  exit "$exit_code"
+}
+
 usage() {
   cat <<'EOF'
 Usage: scripts/onboarding.sh [options]
@@ -253,9 +261,13 @@ print_final_summary() {
 }
 
 main() {
+  trap 'on_error $LINENO $?' ERR
   parse_args "$@"
   preflight
   ensure_repo_ready
+
+  [ -f "$TARGET/scripts/install.sh" ] || fail "install script not found at $TARGET/scripts/install.sh"
+
   run_install_dry_run
   run_install_real
   print_final_summary

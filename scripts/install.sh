@@ -5,6 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BREWFILE_PATH="$REPO_ROOT/Brewfile"
 BREWFILE_LINUX_PATH="$REPO_ROOT/Brewfile.linux"
 SELECTED_BREWFILE_PATH="$BREWFILE_PATH"
+CLAUDE_NPM_PACKAGE="@anthropic-ai/claude-code"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/sebas.dot"
 LOG_FILE="$STATE_DIR/install.log"
 
@@ -103,6 +104,14 @@ run_script_cmd() {
 
   log "RUN: /bin/bash -c <bootstrap script>"
   /bin/bash -c "$script"
+}
+
+on_error() {
+  local line_no="$1"
+  local exit_code="$2"
+  log "ERROR: Installer failed at line $line_no (exit code: $exit_code)"
+  log "TROUBLESHOOTING: review $LOG_FILE and rerun with: bash scripts/install.sh --dry-run"
+  exit "$exit_code"
 }
 
 init_logging() {
@@ -209,7 +218,7 @@ validate_critical_binaries() {
   local bin
   local install_hint=""
 
-  required_bins=(brew zsh nvim zellij atuin git rg fd opencode docker)
+  required_bins=(brew zsh nvim zellij atuin zoxide git rg fd opencode docker)
   missing_bins=()
 
   for bin in "${required_bins[@]}"; do
@@ -219,7 +228,7 @@ validate_critical_binaries() {
   done
 
   if [ "${#missing_bins[@]}" -eq 0 ]; then
-    log "Critical binary check OK: brew zsh nvim zellij atuin git rg fd opencode docker"
+    log "Critical binary check OK: brew zsh nvim zellij atuin zoxide git rg fd opencode docker"
     return
   fi
 
@@ -236,6 +245,115 @@ validate_critical_binaries() {
 
   log "WARNING: Missing critical binaries:${install_hint}"
   log "Run this to install missing binaries: brew install${install_hint}"
+}
+
+ensure_default_shell_zsh() {
+  local zsh_path
+  zsh_path="$(command -v zsh || true)"
+
+  if [ -z "$zsh_path" ]; then
+    log "WARNING: zsh not found in PATH; cannot set default shell"
+    return
+  fi
+
+  local current_shell=""
+  if command -v getent >/dev/null 2>&1; then
+    current_shell="$(getent passwd "$USER" | cut -d: -f7 || true)"
+  fi
+
+  if [ -z "$current_shell" ]; then
+    current_shell="${SHELL:-}"
+  fi
+
+  if [ "$current_shell" = "$zsh_path" ]; then
+    log "Default shell already set to zsh: $zsh_path"
+    return
+  fi
+
+  if ! command -v chsh >/dev/null 2>&1; then
+    log "WARNING: chsh not available. Set shell manually: chsh -s '$zsh_path'"
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "DRY-RUN: would set default shell to zsh with: chsh -s '$zsh_path'"
+    return
+  fi
+
+  log "Setting default shell to zsh for user $USER"
+  chsh -s "$zsh_path" || log "WARNING: Could not change default shell automatically. Run manually: chsh -s '$zsh_path'"
+}
+
+ensure_claude_code() {
+  if command -v claude >/dev/null 2>&1; then
+    log "Claude Code CLI already available"
+    return
+  fi
+
+  if ! command -v npm >/dev/null 2>&1; then
+    log "WARNING: npm not found; skipping Claude Code install"
+    log "Install manually with: npm install -g $CLAUDE_NPM_PACKAGE"
+    return
+  fi
+
+  log "Installing Claude Code CLI from npm package: $CLAUDE_NPM_PACKAGE"
+  run_cmd npm install -g "$CLAUDE_NPM_PACKAGE"
+
+  if command -v claude >/dev/null 2>&1; then
+    log "Claude Code CLI installation completed"
+  else
+    log "WARNING: Claude Code CLI still not found in PATH after installation"
+  fi
+}
+
+verify_shell_integrations() {
+  local zshrc_path="$REPO_ROOT/.zshrc"
+
+  if grep -F 'zoxide init zsh' "$zshrc_path" >/dev/null 2>&1; then
+    log "Shell integration check OK: zoxide init present"
+  else
+    log "WARNING: zoxide init missing in $zshrc_path"
+  fi
+
+  if grep -F 'atuin init zsh' "$zshrc_path" >/dev/null 2>&1; then
+    log "Shell integration check OK: atuin init present"
+  else
+    log "WARNING: atuin init missing in $zshrc_path"
+  fi
+
+  if grep -F "alias zj='zellij'" "$zshrc_path" >/dev/null 2>&1; then
+    log "Shell integration check OK: zellij alias present"
+  else
+    log "WARNING: zellij alias missing in $zshrc_path"
+  fi
+}
+
+ensure_ghostty_uses_zsh() {
+  local ghostty_cfg="$REPO_ROOT/.config/ghostty/config"
+  local zsh_path
+  zsh_path="$(command -v zsh || true)"
+
+  if [ -z "$zsh_path" ]; then
+    zsh_path="/usr/bin/zsh"
+  fi
+
+  if [ ! -f "$ghostty_cfg" ]; then
+    log "WARNING: Ghostty config not found at $ghostty_cfg"
+    return
+  fi
+
+  if grep -E '^command\s*=\s*.+zsh' "$ghostty_cfg" >/dev/null 2>&1; then
+    log "Ghostty shell check OK: zsh command already configured"
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "DRY-RUN: would append Ghostty shell command: command = $zsh_path"
+    return
+  fi
+
+  log "Configuring Ghostty default shell to zsh: $zsh_path"
+  printf '\ncommand = %s\n' "$zsh_path" >>"$ghostty_cfg"
 }
 
 ensure_zsh_in_etc_shells() {
@@ -329,12 +447,16 @@ opencode_sync_phase() {
 run_brew_phase() {
   ensure_linuxbrew
   apply_brewfile
+  ensure_claude_code
   validate_critical_binaries
   ensure_zsh_in_etc_shells
+  ensure_default_shell_zsh
 }
 
 run_links_phase() {
   link_core_configs
+  verify_shell_integrations
+  ensure_ghostty_uses_zsh
 }
 
 run_opencode_phase() {
@@ -343,6 +465,7 @@ run_opencode_phase() {
 }
 
 main() {
+  trap 'on_error $LINENO $?' ERR
   parse_args "$@"
 
   if [ "$SHOW_HELP" -eq 1 ]; then
