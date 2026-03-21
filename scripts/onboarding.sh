@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MODE="safe"
-REPO_URL="git@github.com:sebasmzg/sebas.dot.git"
+REPO_URL="https://github.com/sebasmzg/sebas.dot.git"
 TARGET="$HOME/.sebas.dot"
 SKIP_CLONE=0
 
