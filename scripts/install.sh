@@ -13,6 +13,8 @@ DRY_RUN=0
 NO_DELETE_OPENCODE=0
 ONLY_PHASE=""
 SHOW_HELP=0
+PHASE_WARNINGS=0
+PHASE_ERRORS=0
 
 log() {
   local msg="$1"
@@ -22,6 +24,14 @@ log() {
   if [ -n "${LOG_FILE:-}" ]; then
     printf '%s [sebas.dot] %s\n' "$ts" "$msg" >>"$LOG_FILE"
   fi
+}
+
+warn() {
+  log "WARNING: $1"
+}
+
+err() {
+  log "ERROR: $1"
 }
 
 usage() {
@@ -163,8 +173,8 @@ ensure_linuxbrew() {
   fi
 
   if ! command -v curl >/dev/null 2>&1; then
-    log "ERROR: curl is required to bootstrap Homebrew"
-    exit 1
+    err "curl is required to bootstrap Homebrew"
+    return 1
   fi
 
   log "Fetching installer from Homebrew official URL"
@@ -181,8 +191,8 @@ ensure_linuxbrew() {
   fi
 
   command -v brew >/dev/null 2>&1 || {
-    log "ERROR: brew not available after installation"
-    exit 1
+    err "brew not available after installation"
+    return 1
   }
 }
 
@@ -210,6 +220,14 @@ apply_brewfile() {
   select_brewfile
   log "Applying Brewfile: $SELECTED_BREWFILE_PATH"
   run_cmd brew bundle --file "$SELECTED_BREWFILE_PATH"
+}
+
+print_troubleshooting_hints() {
+  log "Troubleshooting hints:"
+  log "- Install log: $LOG_FILE"
+  log "- Re-run only package installation: bash $REPO_ROOT/scripts/install.sh --only brew"
+  log "- Re-run only symlink setup: bash $REPO_ROOT/scripts/install.sh --only links"
+  log "- Re-run only opencode sync: bash $REPO_ROOT/scripts/install.sh --only opencode --no-delete-opencode"
 }
 
 validate_critical_binaries() {
@@ -399,6 +417,17 @@ ensure_zsh_in_etc_shells() {
   fi
 }
 
+ensure_zsh_runtime_paths() {
+  local zsh_data_dir
+  zsh_data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/zsh"
+  local zsh_history_file
+  zsh_history_file="$zsh_data_dir/history"
+
+  log "Ensuring zsh runtime paths exist"
+  run_cmd mkdir -p "$zsh_data_dir"
+  run_cmd touch "$zsh_history_file"
+}
+
 link_core_configs() {
   log "Creating safe symlinks for core dotfiles"
   safe_symlink "$REPO_ROOT/.zshrc" "$HOME/.zshrc"
@@ -445,15 +474,38 @@ opencode_sync_phase() {
 }
 
 run_brew_phase() {
-  ensure_linuxbrew
-  apply_brewfile
-  ensure_claude_code
+  local brew_ready=1
+  local brew_bundle_ok=1
+
+  if ! ensure_linuxbrew; then
+    brew_ready=0
+    warn "Homebrew bootstrap failed. Continuing with critical dotfiles setup"
+  fi
+
+  if [ "$brew_ready" -eq 1 ]; then
+    if ! apply_brewfile; then
+      brew_bundle_ok=0
+      warn "brew bundle failed. Continuing with symlinks and shell setup"
+    fi
+  fi
+
   validate_critical_binaries
   ensure_zsh_in_etc_shells
   ensure_default_shell_zsh
+
+  if [ "$brew_ready" -eq 1 ]; then
+    ensure_claude_code
+  else
+    warn "Skipping Claude Code install because Homebrew bootstrap did not complete"
+  fi
+
+  if [ "$brew_ready" -eq 0 ] || [ "$brew_bundle_ok" -eq 0 ]; then
+    return 1
+  fi
 }
 
 run_links_phase() {
+  ensure_zsh_runtime_paths
   link_core_configs
   verify_shell_integrations
   ensure_ghostty_uses_zsh
@@ -462,6 +514,28 @@ run_links_phase() {
 run_opencode_phase() {
   opencode_base_phase
   opencode_sync_phase
+}
+
+run_phase() {
+  local phase_name="$1"
+  local severity="$2"
+  shift 2
+
+  log "---- Phase start: $phase_name ----"
+  if "$@"; then
+    log "---- Phase OK: $phase_name ----"
+    return 0
+  fi
+
+  if [ "$severity" = "optional" ]; then
+    PHASE_WARNINGS=$((PHASE_WARNINGS + 1))
+    warn "Phase failed but is optional: $phase_name"
+    return 0
+  fi
+
+  PHASE_ERRORS=$((PHASE_ERRORS + 1))
+  err "Phase failed and is required: $phase_name"
+  return 1
 }
 
 main() {
@@ -479,20 +553,31 @@ main() {
 
   case "$ONLY_PHASE" in
     "")
-      run_brew_phase
-      run_links_phase
-      run_opencode_phase
+      run_phase "brew" "optional" run_brew_phase
+      run_phase "links" "required" run_links_phase
+      run_phase "opencode" "required" run_opencode_phase
       ;;
     brew)
-      run_brew_phase
+      run_phase "brew" "required" run_brew_phase
       ;;
     links)
-      run_links_phase
+      run_phase "links" "required" run_links_phase
       ;;
     opencode)
-      run_opencode_phase
+      run_phase "opencode" "required" run_opencode_phase
       ;;
   esac
+
+  if [ "$PHASE_ERRORS" -gt 0 ]; then
+    err "Installer finished with required phase failures ($PHASE_ERRORS)"
+    print_troubleshooting_hints
+    exit 1
+  fi
+
+  if [ "$PHASE_WARNINGS" -gt 0 ]; then
+    warn "Installer finished with warnings ($PHASE_WARNINGS); critical setup applied"
+    print_troubleshooting_hints
+  fi
 
   log "Done"
 }

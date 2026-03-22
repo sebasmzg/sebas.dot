@@ -11,10 +11,26 @@ fi
 # Path
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
+# Linuxbrew/Homebrew shellenv (supports both system and user prefixes)
+if [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then
+  eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
+elif command -v brew >/dev/null 2>&1; then
+  eval "$(brew shellenv)"
+fi
+
+# Zsh runtime paths
+export ZSH_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh"
+mkdir -p "$ZSH_DATA_DIR"
+touch "$ZSH_DATA_DIR/history"
+
 # Powerlevel10k
 _p10k_theme=""
 if [ -f "$HOME/.local/share/zsh/powerlevel10k/powerlevel10k.zsh-theme" ]; then
     _p10k_theme="$HOME/.local/share/zsh/powerlevel10k/powerlevel10k.zsh-theme"
+elif [ -n "${HOMEBREW_PREFIX:-}" ] && [ -f "$HOMEBREW_PREFIX/opt/powerlevel10k/powerlevel10k.zsh-theme" ]; then
+    _p10k_theme="$HOMEBREW_PREFIX/opt/powerlevel10k/powerlevel10k.zsh-theme"
 elif command -v brew >/dev/null 2>&1; then
     _p10k_theme="$(brew --prefix)/opt/powerlevel10k/powerlevel10k.zsh-theme"
 elif [ -f "/home/linuxbrew/.linuxbrew/opt/powerlevel10k/powerlevel10k.zsh-theme" ]; then
@@ -34,7 +50,7 @@ compinit -d ~/.local/share/zsh/zcompdump
 # Historial mejorado
 HISTSIZE=10000
 SAVEHIST=10000
-HISTFILE=~/.local/share/zsh/history
+HISTFILE="$ZSH_DATA_DIR/history"
 
 # Opciones de Zsh
 setopt AUTO_CD
@@ -130,10 +146,3 @@ export PATH="$HOME/.atuin/bin:$PATH"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-if [ -x "/home/linuxbrew/.linuxbrew/bin/brew" ]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-elif [ -x "$HOME/.linuxbrew/bin/brew" ]; then
-    eval "$("$HOME/.linuxbrew/bin/brew" shellenv)"
-elif command -v brew >/dev/null 2>&1; then
-    eval "$(brew shellenv)"
-fi

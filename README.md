@@ -32,19 +32,26 @@ El onboarding ahora deja listo: OpenCode, Claude Code (CLI), shell default zsh y
 
 ### Ubuntu (fresh setup)
 
-1. Ejecuta onboarding desde el repo clonado:
+1. Instala prerequisitos minimos del sistema:
+
+```bash
+sudo apt update
+sudo apt install -y git curl rsync bash zsh
+```
+
+2. Ejecuta onboarding en modo seguro:
 
 ```bash
 bash scripts/onboarding.sh --mode safe
 ```
 
-2. Abre una nueva terminal o recarga zsh para aplicar entorno y PATH:
+3. Abre una nueva terminal o recarga zsh para aplicar entorno y PATH:
 
 ```bash
 exec zsh
 ```
 
-3. Verifica que los links principales quedaron activos:
+4. Verifica que los links principales quedaron activos:
 
 ```bash
 ls -la ~/.zshrc ~/.p10k.zsh ~/.config/nvim ~/.config/zellij ~/.config/atuin ~/.config/ghostty
@@ -88,4 +95,35 @@ command -v claude
 
 ```bash
 grep '^command = ' ~/.config/ghostty/config
+```
+
+## Resiliencia del instalador
+
+- `scripts/install.sh` separa fases (`brew`, `links`, `opencode`).
+- La fase `brew` es opcional en ejecucion completa: si falla algun paquete de Homebrew, el instalador igual aplica symlinks/config critica.
+- Las fases `links` y `opencode` son requeridas.
+- El historial de zsh se garantiza en `~/.local/share/zsh/history`.
+- Powerlevel10k se carga desde rutas locales o de Linuxbrew/Homebrew cuando existe.
+
+## Troubleshooting rapido
+
+- Logs:
+  - Onboarding: `${XDG_STATE_HOME:-$HOME/.local/state}/sebas.dot/onboarding.log`
+  - Install: `${XDG_STATE_HOME:-$HOME/.local/state}/sebas.dot/install.log`
+- Reintentar solo paquetes:
+
+```bash
+bash scripts/install.sh --only brew
+```
+
+- Reaplicar symlinks/config critica:
+
+```bash
+bash scripts/install.sh --only links
+```
+
+- Reaplicar config de opencode sin borrar extras locales:
+
+```bash
+bash scripts/install.sh --only opencode --no-delete-opencode
 ```
